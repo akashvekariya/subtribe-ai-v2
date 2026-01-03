@@ -68,6 +68,8 @@ def configure(**kwargs) -> Settings:
     Must be called before using any subtribe-ai functionality.
     This is typically done during application startup.
 
+    Also sets environment variables for BAML to pick up API keys.
+
     Args:
         **kwargs: Configuration values matching Settings fields.
 
@@ -86,8 +88,20 @@ def configure(**kwargs) -> Settings:
             langfuse_secret_key="sk-xxx",
         )
     """
+    import os
+
     global _settings
     _settings = Settings(**kwargs)
+
+    # Set environment variables for BAML to read
+    # BAML clients read API keys from env.SUBTRIBE_AI_* variables
+    if _settings.google_api_key:
+        os.environ["SUBTRIBE_AI_GOOGLE_API_KEY"] = _settings.google_api_key
+    if _settings.openai_api_key:
+        os.environ["SUBTRIBE_AI_OPENAI_API_KEY"] = _settings.openai_api_key
+    if _settings.anthropic_api_key:
+        os.environ["SUBTRIBE_AI_ANTHROPIC_API_KEY"] = _settings.anthropic_api_key
+
     return _settings
 
 
