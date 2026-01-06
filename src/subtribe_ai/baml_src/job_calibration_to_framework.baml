@@ -370,7 +370,7 @@ class EvaluationFramework {
 // ============================================================================
 
 function CreateEvaluationFramework(calibration: CalibrationResponse) -> EvaluationFramework {
-  client Gemini3FlashPreview
+  client Gemini3FlashPreview__JobCalibrationToFramework
   prompt #"
     {{ _.role("system") }}
     You are an expert in talent assessment and evaluation framework design. Your task is to transform a recruiter's calibration decisions into a structured evaluation framework for RESUME SCREENING.

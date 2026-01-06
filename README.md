@@ -19,7 +19,7 @@ pip install -e ".[dev]"
 Set environment variables with the `SUBTRIBE_AI_` prefix:
 
 ```bash
-export SUBTRIBE_AI_GOOGLE_API_KEY=your-gemini-api-key
+export GOOGLE_API_KEY=your-gemini-api-key
 ```
 
 See `.env.example` for all available options.

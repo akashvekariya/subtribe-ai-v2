@@ -75,10 +75,16 @@ class ResumeService:
             preprocessed = preprocess_links(links)
             links_json = links_to_prompt_text(preprocessed)
 
-            # Call BAML
-            baml_response = b.AnalyzeResumeWithLinks(
+            # Step 1: Extract PDF to markdown
+            markdown_text = b.ExtractResumeToMarkdown(
                 resume=resume_pdf,
                 links_json=links_json,
+            )
+
+            # Step 2: Parse markdown to structured JSON
+            baml_response = b.ParseResume(
+                resume_markdown=markdown_text,
+                extracted_links_text=links_json,
             )
 
             # Run post-processing

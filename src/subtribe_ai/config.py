@@ -96,7 +96,7 @@ def configure(**kwargs) -> Settings:
     # Set environment variables for BAML to read
     # BAML clients read API keys from env.SUBTRIBE_AI_* variables
     if _settings.google_api_key:
-        os.environ["SUBTRIBE_AI_GOOGLE_API_KEY"] = _settings.google_api_key
+        os.environ["GOOGLE_API_KEY"] = _settings.google_api_key
     if _settings.openai_api_key:
         os.environ["SUBTRIBE_AI_OPENAI_API_KEY"] = _settings.openai_api_key
     if _settings.anthropic_api_key:

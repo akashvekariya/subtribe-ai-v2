@@ -191,7 +191,7 @@ class JobInput {
 // ============================================================================
 
 function ParseJobDescription(job: JobInput) -> JDParseResponse {
-  client Gemini3FlashPreview
+  client Gemini3FlashPreview__JobToCalibration
   prompt #"
     {{ _.role("system") }}
     You are an expert recruiter and hiring consultant who works across ALL industries and role types - not just software engineering. Your task is to analyze job descriptions and generate calibration questions that help hiring managers make explicit decisions about their REAL requirements.

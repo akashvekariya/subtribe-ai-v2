@@ -138,23 +138,11 @@ class CandidateEvaluation {
 // MAIN FUNCTION
 // ============================================================================
 
-function EvaluateCandidate(framework_json: string, candidate_resume: string, computed_facts_json: string) -> CandidateEvaluation {
-  client Gemini3FlashPreview_CandidateEvals
+function EvaluateCandidate(framework_json: string, parsed_resume_json: string) -> CandidateEvaluation {
+  client Gemini2_5FlashLite__CandidateEvaluation
   prompt #"
     {{ _.role("system") }}
-    You are an expert resume evaluator. Your task is to evaluate a candidate's resume against a structured evaluation framework and output a detailed assessment.
-
-    ## IMPORTANT: PRE-COMPUTED FACTS
-
-    You are provided with COMPUTED_FACTS - these are DETERMINISTIC calculations from Phase 1.
-    For experience-related data, USE THESE VALUES AS GROUND TRUTH:
-    - total_months, total_years: Use these exact values for experience assessments
-    - entries[].duration_months: Pre-calculated durations (DO NOT recalculate)
-    - gaps: Already detected employment gaps
-    - anomalies: Already detected date anomalies
-
-    When outputting experience_entries, COPY the data from computed_facts.experience.entries.
-    DO NOT recalculate durations - the computed values are authoritative.
+    You are an expert resume evaluator. Your task is to evaluate a candidate's parsed resume against a structured evaluation framework and output a detailed assessment.
 
     ## YOUR TASK
 
@@ -348,14 +336,10 @@ function EvaluateCandidate(framework_json: string, candidate_resume: string, com
     {{ framework_json }}
     ```
 
-    ## COMPUTED FACTS (DETERMINISTIC - USE AS GROUND TRUTH)
+    ## PARSED RESUME (JSON)
 
     ```json
-    {{ computed_facts_json }}
+    {{ parsed_resume_json }}
     ```
-
-    ## CANDIDATE RESUME
-
-    {{ candidate_resume }}
   "#
 }

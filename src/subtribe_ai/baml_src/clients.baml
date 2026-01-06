@@ -1,69 +1,12 @@
-// LLM Client Definitions for Subtribe AI
-// Consolidated from subtribe-poc and resume-screener
-
 // ============================================================================
-// GOOGLE GEMINI CLIENTS
+// PURPOSE-SPECIFIC CLIENTS
 // ============================================================================
 
-// Gemini 2.0 Flash - Fast, general purpose
-client<llm> Gemini2_0Flash {
-  provider google-ai
-  options {
-    model "gemini-2.0-flash"
-    api_key env.SUBTRIBE_AI_GOOGLE_API_KEY
-    generationConfig {
-      thinkingConfig {
-        thinkingBudget 0
-      }
-      temperature 0
-      topP 0.7
-      topK 10
-      maxOutputTokens 5000
-    }
-  }
-}
-
-// Gemini 2.0 Flash Lite - Lightweight tasks
-client<llm> Gemini2_0FlashLite {
-  provider google-ai
-  options {
-    model "gemini-2.0-flash-lite"
-    api_key env.SUBTRIBE_AI_GOOGLE_API_KEY
-    generationConfig {
-      thinkingConfig {
-        thinkingBudget 0
-      }
-      temperature 0
-      topP 0.7
-      topK 10
-      maxOutputTokens 5000
-    }
-  }
-}
-
-// Gemini 2.5 Flash - Latest fast model
-client<llm> Gemini2_5Flash {
-  provider google-ai
-  options {
-    model "gemini-2.5-flash"
-    api_key env.SUBTRIBE_AI_GOOGLE_API_KEY
-    generationConfig {
-      thinkingConfig {
-        thinkingBudget 0
-      }
-      temperature 0
-      topP 0.7
-      topK 10
-      maxOutputTokens 5000
-    }
-  }
-}
-
-// Gemini 2.5 Flash Lite - Lightweight, no thinking
-client<llm> Gemini2_5FlashLite {
+// Resume PDF to Markdown extraction
+client<llm> Gemini2_5FlashLite__CandidateResumeToMarkdown {
   provider "google-ai"
   options {
-    api_key env.SUBTRIBE_AI_GOOGLE_API_KEY
+    api_key env.GOOGLE_API_KEY
     model "gemini-2.5-flash-lite"
     generationConfig: {
       thinkingConfig: {
@@ -76,15 +19,15 @@ client<llm> Gemini2_5FlashLite {
   }
 }
 
-// Gemini 3 Flash Preview - With thinking budget
-client<llm> Gemini3FlashPreview {
+// Markdown to structured JSON parsing
+client<llm> Gemini2_5FlashLite__CandidateResumeMarkdownToJson {
   provider "google-ai"
   options {
-    api_key env.SUBTRIBE_AI_GOOGLE_API_KEY
-    model "gemini-3-flash-preview"
+    api_key env.GOOGLE_API_KEY
+    model "gemini-2.5-flash-lite"
     generationConfig: {
       thinkingConfig: {
-        thinkingBudget: 2000
+        thinkingBudget: 0
       }
       temperature 0
       topP 0.1
@@ -93,11 +36,11 @@ client<llm> Gemini3FlashPreview {
   }
 }
 
-// Gemini 3 Flash Preview - For Candidate Evaluations (higher temperature)
-client<llm> Gemini3FlashPreview_CandidateEvals {
+// Job description to Calibration generation
+client<llm> Gemini3FlashPreview__JobToCalibration {
   provider "google-ai"
   options {
-    api_key env.SUBTRIBE_AI_GOOGLE_API_KEY
+    api_key env.GOOGLE_API_KEY
     model "gemini-3-flash-preview"
     generationConfig: {
       thinkingConfig: {
@@ -110,59 +53,36 @@ client<llm> Gemini3FlashPreview_CandidateEvals {
   }
 }
 
-// Gemini 3 Pro Preview - Most capable
-client<llm> Gemini3Pro {
+// Calibration to Evaluation Framework generation
+client<llm> Gemini3FlashPreview__JobCalibrationToFramework {
   provider "google-ai"
   options {
-    api_key env.SUBTRIBE_AI_GOOGLE_API_KEY
-    model "gemini-3-pro-preview"
+    api_key env.GOOGLE_API_KEY
+    model "gemini-3-flash-preview"
     generationConfig: {
       thinkingConfig: {
-        thinkingBudget: 1000
+        thinkingBudget: 2000
       }
-      temperature 0.2
-      topP 0.5
-      topK 5
+      temperature 0.7
+      topP 1
+      topK 10
     }
   }
 }
 
-// ============================================================================
-// OPENAI CLIENTS
-// ============================================================================
-
-// OpenAI GPT-5 Nano - Fast, lightweight
-client<llm> OpenAI5Nano {
-  provider openai-responses
+// Candidate evaluation using Framework + Resume JSON
+client<llm> Gemini2_5FlashLite__CandidateEvaluation {
+  provider "google-ai"
   options {
-    model "gpt-5-nano"
-    api_key env.SUBTRIBE_AI_OPENAI_API_KEY
-    reasoning {
-      effort "minimal"
+    api_key env.GOOGLE_API_KEY
+    model "gemini-2.5-flash-lite"
+    generationConfig: {
+      thinkingConfig: {
+        thinkingBudget: 0
+      }
+      temperature 0
+      topP 0.1
+      topK 1
     }
-  }
-}
-
-// ============================================================================
-// OPENROUTER CLIENTS (Fallback/Alternative)
-// ============================================================================
-
-// OpenRouter Gemini 2.5 Flash Lite
-client<llm> OpenRouter_Gemini2_5FlashLite_High {
-  provider "openai-generic"
-  options {
-    base_url "https://openrouter.ai/api/v1"
-    api_key env.SUBTRIBE_AI_OPENROUTER_API_KEY
-    model "google/gemini-2.5-flash-lite"
-    headers {
-      "X-Title" "Subtribe"
-    }
-    reasoning {
-      exclude true
-    }
-    temperature 0.3
-    top_p 0.5
-    top_k 5
-    max_tokens 5000
   }
 }
