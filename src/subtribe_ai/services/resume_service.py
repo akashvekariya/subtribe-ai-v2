@@ -10,6 +10,7 @@ from subtribe_ai.utils import extract_links, pdf_to_base64, preprocess_links, li
 
 class ParsedResume(TypedDict):
     """Type hint for parsed resume result."""
+    markdown: str  # Gemini-extracted markdown from PDF
     personal_info: dict
     experience: list
     education: list
@@ -90,6 +91,9 @@ class ResumeService:
             # Run post-processing
             result = run_post_processing(baml_response)
 
+            # Include the markdown in the result
+            result["markdown"] = markdown_text
+
         finally:
             temp_path.unlink()
 
@@ -132,6 +136,7 @@ class ResumeService:
 
         # Run post-processing
         result = run_post_processing(baml_response)
+        result["markdown"] = markdown_text
         result["timing"] = {"seconds": round(time.time() - start, 2)}
 
         return result
