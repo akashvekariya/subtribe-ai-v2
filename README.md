@@ -1,84 +1,57 @@
 # subtribe-ai
 
-AI functionality for the Subtribe recruitment platform.
+The AI engine behind Subtribe, an applicant tracking system for small and mid-size recruiting teams. It turns a resume and a job description into a structured, explainable candidate evaluation.
 
-## Installation
+Packaged as a Python library and consumed by [subtribe-backend](https://github.com/akashvekariya/subtribe-backend-v2).
 
-```bash
-# Install from git
-pip install "subtribe-ai @ git+https://github.com/subtribe/subtribe-ai.git@v0.1.0"
+## How it works
 
-# Or for development
-git clone https://github.com/subtribe/subtribe-ai.git
-cd subtribe-ai
-pip install -e ".[dev]"
+Two pipelines meet at one evaluation step:
+
+```
+Resume (PDF/image) -> Markdown -> structured profile ----+
+                                                         +--> Evaluation: score, tier, evidence
+Job description -> calibration -> evaluation framework --+
 ```
 
-## Configuration
+- **Resume parsing**: extracts the resume verbatim to Markdown (links recovered from the PDF), then to typed JSON. Experience totals, gaps and overlaps are computed in code, not by the model.
+- **Job calibration**: reads a job description, asks the recruiter a short set of calibration questions, and builds a weighted evaluation framework from the answers.
+- **Evaluation**: scores each candidate against the framework dimension by dimension, with skill matches, hard constraints, red flags and suggested interview questions.
+- **Guardrails**: prompt-injection and resume-manipulation checks, enum normalization and weight validation around every model call.
 
-Set environment variables with the `SUBTRIBE_AI_` prefix:
+## Stack
 
-```bash
-export GOOGLE_API_KEY=your-gemini-api-key
-```
-
-See `.env.example` for all available options.
+- BAML for typed, schema-checked LLM output
+- Gemini 2.5 Flash Lite and Gemini 3 Flash
+- PyMuPDF for PDF and link extraction
+- Pydantic models, Langfuse tracing
 
 ## Usage
-
-### Convenience Functions
 
 ```python
 from subtribe_ai import parse_resume, evaluate_candidate
 
-# Parse a PDF resume
-with open("resume.pdf", "rb") as f:
-    result = await parse_resume(f.read())
-
-print(result["personal_info"]["full_name"])
-print(result["experience_summary"]["total_months"])
-
-# Evaluate a candidate
-evaluation = await evaluate_candidate(
-    resume_text=resume_markdown,
-    framework=evaluation_framework,
-)
-print(f"Score: {evaluation['scores']['final_score']}")
-print(f"Tier: {evaluation['tier']}")
-```
-
-### Service Classes
-
-For more control, use the service classes directly:
-
-```python
-from subtribe_ai import ResumeService, EvaluationService
-
-# Custom configuration
-resume_service = ResumeService(enable_tracing=True)
-result = await resume_service.parse(pdf_bytes)
-
-evaluation_service = EvaluationService()
-result = await evaluation_service.evaluate(resume_text, framework)
+resume = parse_resume(pdf_bytes)               # {"markdown": ..., "parsed": {...}}
+result = evaluate_candidate(resume["parsed"], framework)
+print(result["scores"]["final_score"], result["scores"]["tier"])
 ```
 
 ## Development
 
 ```bash
-# Install dev dependencies
 pip install -e ".[dev]"
-
-# Generate BAML client
-baml generate
-
-# Run tests
+baml-cli generate
 pytest
-
-# Lint and format
-ruff check src/
-ruff format src/
 ```
 
-## License
+Requires `GOOGLE_API_KEY` in the environment.
 
-MIT
+## Layout
+
+```
+src/subtribe_ai/
+  baml_src/     prompts and output schemas
+  processing/   resume, framework and evaluation pipelines
+  services/     public service classes
+  utils/        dates, experience math, PDF and link helpers
+```
