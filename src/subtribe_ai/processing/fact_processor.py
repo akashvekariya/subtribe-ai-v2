@@ -14,14 +14,14 @@ from datetime import date
 from typing import Optional
 
 from subtribe_ai.utils import (
+    CertificationEntry,
     DateParser,
+    EducationEntry,
+    EnrichedFacts,
     ExperienceCalculator,
+    ExperienceType,
     RawDateInput,
     RawExperienceInput,
-    EnrichedFacts,
-    ExperienceType,
-    EducationEntry,
-    CertificationEntry,
 )
 
 
@@ -172,11 +172,15 @@ def _calculate_years_since_graduation(
 
     most_recent = max(
         completed,
-        key=lambda e: (e.graduation_year, e.graduation_month or 6),
+        key=lambda e: (e.graduation_year or 0, e.graduation_month or 6),
     )
 
+    grad_year = most_recent.graduation_year
+    if grad_year is None:
+        return None
+
     grad_month = most_recent.graduation_month or 6
-    grad_date = date(most_recent.graduation_year, grad_month, 1)
+    grad_date = date(grad_year, grad_month, 1)
 
     years = (reference_date - grad_date).days / 365.25
     return round(years, 1)

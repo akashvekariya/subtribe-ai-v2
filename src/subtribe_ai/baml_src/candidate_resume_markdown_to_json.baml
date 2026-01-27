@@ -47,7 +47,7 @@ class OtherLink {
 }
 
 class PersonalInfo {
-  full_name string @description("Full name as written on resume")
+  full_name string? @description("Full name as written on resume, null if not identifiable")
   first_name string? @description("First name, only if identifiable")
   last_name string? @description("Last name, only if identifiable")
   email string? @description("Email address")

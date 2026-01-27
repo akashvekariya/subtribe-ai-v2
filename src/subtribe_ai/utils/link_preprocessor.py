@@ -8,7 +8,7 @@ Prepares PDF-extracted links before sending to LLM:
 """
 
 import re
-from typing import Optional
+from typing import Any, Mapping, Optional, Sequence
 
 
 def extract_github_username(url: str) -> Optional[str]:
@@ -33,7 +33,7 @@ def is_github_repo_url(url: str) -> bool:
     return bool(re.match(r"https?://(?:www\.)?github\.com/[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+", url))
 
 
-def preprocess_links(link_mappings: list[dict]) -> list[dict]:
+def preprocess_links(link_mappings: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     """
     Preprocess links before sending to LLM.
 

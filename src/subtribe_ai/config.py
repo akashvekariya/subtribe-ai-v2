@@ -106,7 +106,6 @@ def configure(**kwargs) -> Settings:
 
 
 # For backward compatibility - but will raise if not configured
-@property
 def settings() -> Settings:
     """Access settings (deprecated, use get_settings())."""
     return get_settings()

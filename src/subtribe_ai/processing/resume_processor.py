@@ -12,15 +12,14 @@ BAML output is returned as-is. This only ADDS computed metrics.
 
 import re
 from datetime import date
-from typing import Optional, Any
+from typing import Any, Optional
 
 from .models import (
     DateWarning,
     ExperienceMetrics,
     ExperienceSummary,
-    ProjectMetrics,
     Gap,
-    ComputedFields,
+    ProjectMetrics,
 )
 
 
@@ -137,6 +136,7 @@ def detect_overlaps(
     timeline = []
     for i, exp in enumerate(experiences):
         start_date, _ = parse_date_string(exp.start_date)
+        end_date: date | None
         if exp.is_ongoing:
             end_date = reference_date
         else:
@@ -175,6 +175,7 @@ def detect_gaps(
     timeline = []
     for exp in experiences:
         start_date, _ = parse_date_string(exp.start_date)
+        end_date: date | None
         if exp.is_ongoing:
             end_date = reference_date
         else:
@@ -260,7 +261,7 @@ def compute_project_metrics(
     metrics = []
     for i, proj in enumerate(projects):
         duration = None
-        warnings = []
+        warnings: list[str] = []
 
         if proj.start_date or proj.end_date:
             duration, warnings = calculate_duration(
@@ -323,19 +324,60 @@ def process_resume(baml_output, reference_date: Optional[date] = None) -> dict:
     """
     Main entry point: Add computed fields to BAML ParsedResume.
 
-    Returns dict with:
-    - All original BAML fields (from model_dump)
-    - computed: ComputedFields with durations, summaries, warnings
+    Returns dict with consolidated structure:
+    - experience: { summary: {...}, entries: [...] }
+    - education: { summary: {...}, entries: [...] }
+    - projects: { summary: {...}, entries: [...] }
+    - Other fields (personal_info, skills, certifications, etc.) unchanged
     """
     if reference_date is None:
         reference_date = date.today()
+
+    # Get base BAML output
+    result = baml_output.model_dump(mode="json")
 
     # Compute experience metrics
     exp_metrics = compute_experience_metrics(baml_output.experience, reference_date)
     exp_summary = build_experience_summary(baml_output.experience, exp_metrics, reference_date)
 
+    # Build experience entries with duration merged in
+    experience_entries = []
+    for i, exp in enumerate(result.get("experience", [])):
+        exp["duration_months"] = exp_metrics[i].duration_months
+        exp["date_warnings"] = exp_metrics[i].warnings
+        experience_entries.append(exp)
+
+    # Restructure experience
+    result["experience"] = {
+        "summary": {
+            "total_months": exp_summary.total_months,
+            "by_category": exp_summary.by_category,
+            "has_overlaps": exp_summary.has_overlaps,
+            "overlap_months": exp_summary.overlap_months,
+            "gaps": [g.model_dump() for g in exp_summary.gaps],
+            "has_significant_gaps": exp_summary.has_significant_gaps,
+            "warnings": exp_summary.warnings,
+        },
+        "entries": experience_entries,
+    }
+
     # Compute project metrics
     proj_metrics = compute_project_metrics(baml_output.projects, reference_date)
+
+    # Build project entries with duration merged in
+    project_entries = []
+    for i, proj in enumerate(result.get("projects", [])):
+        proj["duration_months"] = proj_metrics[i].duration_months
+        proj["date_warnings"] = proj_metrics[i].warnings
+        project_entries.append(proj)
+
+    # Restructure projects
+    result["projects"] = {
+        "summary": {
+            "count": len(project_entries),
+        },
+        "entries": project_entries,
+    }
 
     # Compute education insights
     months_since_grad, highest_level = compute_education_insights(
@@ -343,17 +385,15 @@ def process_resume(baml_output, reference_date: Optional[date] = None) -> dict:
         reference_date,
     )
 
-    # Build computed fields
-    computed = ComputedFields(
-        experience_summary=exp_summary,
-        project_metrics=proj_metrics,
-        months_since_graduation=months_since_grad,
-        highest_education_level=highest_level,
-    )
-
-    # Return BAML output + computed fields
-    result = baml_output.model_dump(mode="json")
-    result["computed"] = computed.model_dump(mode="json")
+    # Restructure education
+    education_entries = result.get("education", [])
+    result["education"] = {
+        "summary": {
+            "highest_level": highest_level,
+            "months_since_graduation": months_since_grad,
+        },
+        "entries": education_entries,
+    }
 
     return result
 

@@ -3,22 +3,25 @@
 Orchestrates PDF parsing -> BAML extraction -> post-processing.
 """
 
-from typing import TypedDict
+from typing import cast, TypedDict
 
 from subtribe_ai.utils import extract_links, pdf_to_base64, preprocess_links, links_to_prompt_text
 
 
-class ParsedResume(TypedDict):
-    """Type hint for parsed resume result."""
-    markdown: str  # Gemini-extracted markdown from PDF
+class ParsedResumeData(TypedDict):
+    """Type hint for parsed resume data."""
     personal_info: dict
-    experience: list
-    education: list
-    projects: list
+    experience: dict  # Now has summary + entries
+    education: dict   # Now has summary + entries
+    projects: dict    # Now has summary + entries
     certifications: list
     skills: dict | None
-    computed: dict
-    timing: dict | None
+
+
+class ParsedResumeResult(TypedDict):
+    """Type hint for parse result with markdown and parsed data separate."""
+    markdown: str           # For storing in resume_parsed_md
+    parsed: ParsedResumeData  # For storing in resume_parsed_json
 
 
 class ResumeService:
@@ -39,7 +42,7 @@ class ResumeService:
         """
         self._enable_tracing = enable_tracing
 
-    def parse_pdf(self, pdf_bytes: bytes, link_padding: float = 2.5) -> ParsedResume:
+    def parse_pdf(self, pdf_bytes: bytes, link_padding: float = 2.5) -> ParsedResumeResult:
         """Parse a PDF resume into structured JSON.
 
         Args:
@@ -47,7 +50,9 @@ class ResumeService:
             link_padding: Padding around link rectangles for text extraction.
 
         Returns:
-            ParsedResume with structured data and computed metrics.
+            ParsedResumeResult with:
+            - markdown: extracted markdown text (for resume_parsed_md)
+            - parsed: structured JSON data (for resume_parsed_json)
         """
         import tempfile
         import time
@@ -89,22 +94,23 @@ class ResumeService:
             )
 
             # Run post-processing
-            result = run_post_processing(baml_response)
-
-            # Include the markdown in the result
-            result["markdown"] = markdown_text
+            parsed = run_post_processing(baml_response)
 
         finally:
             temp_path.unlink()
 
-        result["timing"] = {"seconds": round(time.time() - start, 2)}
-        return result
+        parsed["timing"] = {"seconds": round(time.time() - start, 2)}
+
+        return cast(ParsedResumeResult, {
+            "markdown": markdown_text,
+            "parsed": parsed,
+        })
 
     def parse_markdown(
         self,
         markdown_text: str,
         link_mappings: list[dict] | None = None,
-    ) -> ParsedResume:
+    ) -> ParsedResumeResult:
         """Parse a markdown resume into structured JSON.
 
         Args:
@@ -112,7 +118,9 @@ class ResumeService:
             link_mappings: Optional list of {display_text, url} dicts for link context.
 
         Returns:
-            ParsedResume with structured data and computed metrics.
+            ParsedResumeResult with:
+            - markdown: the input markdown text (for resume_parsed_md)
+            - parsed: structured JSON data (for resume_parsed_json)
         """
         import time
 
@@ -135,8 +143,10 @@ class ResumeService:
         )
 
         # Run post-processing
-        result = run_post_processing(baml_response)
-        result["markdown"] = markdown_text
-        result["timing"] = {"seconds": round(time.time() - start, 2)}
+        parsed = run_post_processing(baml_response)
+        parsed["timing"] = {"seconds": round(time.time() - start, 2)}
 
-        return result
+        return cast(ParsedResumeResult, {
+            "markdown": markdown_text,
+            "parsed": parsed,
+        })

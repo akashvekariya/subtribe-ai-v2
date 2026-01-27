@@ -12,11 +12,11 @@ from datetime import date
 from typing import Optional
 
 from .models import (
+    DateAnomaly,
+    EmploymentGap,
     EnrichedExperience,
     ExperienceSummary,
-    EmploymentGap,
     ExperienceType,
-    DateAnomaly,
 )
 
 
@@ -136,7 +136,11 @@ class ExperienceCalculator:
         if len(valid_entries) < 2:
             return 0, False
 
-        sorted_entries = sorted(valid_entries, key=lambda e: e.start_date)
+        # Sort by start_date - all entries have start_date after filter above
+        sorted_entries = sorted(
+            valid_entries,
+            key=lambda e: e.start_date or date.min,
+        )
 
         total_overlap = 0
         has_overlaps = False
@@ -147,12 +151,15 @@ class ExperienceCalculator:
 
             for j in range(i + 1, len(sorted_entries)):
                 next_entry = sorted_entries[j]
+                next_start = next_entry.start_date
+                if next_start is None:
+                    continue
 
-                if next_entry.start_date < current_end:
+                if next_start < current_end:
                     has_overlaps = True
                     next_end = next_entry.end_date or self.reference_date
 
-                    overlap_start = next_entry.start_date
+                    overlap_start = next_start
                     overlap_end = min(current_end, next_end)
 
                     if overlap_end > overlap_start:
@@ -184,18 +191,21 @@ class ExperienceCalculator:
             key=lambda e: e.end_date or self.reference_date,
         )
 
-        gaps = []
+        gaps: list[EmploymentGap] = []
 
         for i in range(len(sorted_entries) - 1):
             current = sorted_entries[i]
             next_entry = sorted_entries[i + 1]
 
             current_end = current.end_date or self.reference_date
+            next_start = next_entry.start_date
+            if next_start is None:
+                continue
 
-            if next_entry.start_date > current_end:
+            if next_start > current_end:
                 gap_months = (
-                    (next_entry.start_date.year - current_end.year) * 12
-                    + next_entry.start_date.month
+                    (next_start.year - current_end.year) * 12
+                    + next_start.month
                     - current_end.month
                 )
 
@@ -205,7 +215,7 @@ class ExperienceCalculator:
                             after_company=current.company,
                             before_company=next_entry.company,
                             gap_start=current_end,
-                            gap_end=next_entry.start_date,
+                            gap_end=next_start,
                             gap_months=gap_months,
                             is_significant=gap_months >= self.significant_gap_months,
                         )

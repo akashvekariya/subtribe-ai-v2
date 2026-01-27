@@ -30,7 +30,7 @@ from subtribe_ai.exceptions import (
 )
 from subtribe_ai.services import (
     ResumeService,
-    ParsedResume,
+    ParsedResumeResult,
     JobService,
     JobData,
     FrameworkService,
@@ -88,7 +88,7 @@ def _get_evaluation_service() -> EvaluationService:
 def parse_resume(
     pdf_bytes: bytes,
     link_padding: float = 2.5,
-) -> ParsedResume:
+) -> ParsedResumeResult:
     """Parse a PDF resume into structured JSON.
 
     Args:
@@ -96,12 +96,15 @@ def parse_resume(
         link_padding: Padding around link rectangles for text extraction.
 
     Returns:
-        ParsedResume with structured data and computed metrics.
+        ParsedResumeResult with:
+        - markdown: extracted markdown text (for resume_parsed_md)
+        - parsed: structured JSON data (for resume_parsed_json)
 
     Example:
         with open("resume.pdf", "rb") as f:
             result = parse_resume(f.read())
-        print(result["personal_info"]["full_name"])
+        markdown = result["markdown"]  # For resume_parsed_md
+        parsed = result["parsed"]      # For resume_parsed_json
     """
     return _get_resume_service().parse_pdf(pdf_bytes, link_padding)
 
@@ -109,7 +112,7 @@ def parse_resume(
 def parse_resume_markdown(
     markdown_text: str,
     link_mappings: list[dict] | None = None,
-) -> ParsedResume:
+) -> ParsedResumeResult:
     """Parse a markdown resume into structured JSON.
 
     Args:
@@ -117,7 +120,9 @@ def parse_resume_markdown(
         link_mappings: Optional list of {display_text, url} dicts.
 
     Returns:
-        ParsedResume with structured data and computed metrics.
+        ParsedResumeResult with:
+        - markdown: the input markdown text (for resume_parsed_md)
+        - parsed: structured JSON data (for resume_parsed_json)
     """
     return _get_resume_service().parse_markdown(markdown_text, link_mappings)
 
@@ -154,44 +159,23 @@ def create_framework(calibration_response: dict) -> FrameworkResult:
     return _get_framework_service().create(calibration_response)
 
 
-def evaluate_candidate(resume_text: str, framework: dict) -> EvaluationResult:
+def evaluate_candidate(parsed_resume: dict, framework: dict) -> EvaluationResult:
     """Evaluate a candidate resume against an evaluation framework.
 
-    Two-phase pipeline:
-    - Phase 1: Extract facts (dates, experience) deterministically
-    - Phase 2: Evaluate with pre-computed facts as ground truth
-
     Args:
-        resume_text: Raw resume text (markdown or plain text).
+        parsed_resume: Parsed resume dict from parse_resume() or parse_resume_markdown().
         framework: Evaluation framework from create_framework().
 
     Returns:
-        EvaluationResult with scores, matches, and computed facts.
+        EvaluationResult with scores, matches, and assessments.
 
     Example:
-        evaluation = evaluate_candidate(resume_text, framework)
+        parsed = parse_resume(pdf_bytes)
+        evaluation = evaluate_candidate(parsed, framework)
         print(f"Score: {evaluation['scores']['final_score']}")
         print(f"Tier: {evaluation['scores']['tier']}")
     """
-    return _get_evaluation_service().evaluate(resume_text, framework)
-
-
-def extract_facts(
-    resume_text: str,
-    skill_ids: list[str] | None = None,
-) -> dict:
-    """Extract structured facts from a resume.
-
-    Useful for testing fact extraction before full evaluation.
-
-    Args:
-        resume_text: Raw resume text (markdown or plain text).
-        skill_ids: Optional list of skill IDs to look for.
-
-    Returns:
-        Dict with enriched facts and experience summary.
-    """
-    return _get_evaluation_service().extract_facts(resume_text, skill_ids)
+    return _get_evaluation_service().evaluate(parsed_resume, framework)
 
 
 __all__ = [
@@ -212,7 +196,7 @@ __all__ = [
     "PDFError",
     # Service classes
     "ResumeService",
-    "ParsedResume",
+    "ParsedResumeResult",
     "JobService",
     "JobData",
     "FrameworkService",
@@ -225,5 +209,4 @@ __all__ = [
     "parse_job_description",
     "create_framework",
     "evaluate_candidate",
-    "extract_facts",
 ]

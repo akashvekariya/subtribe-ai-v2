@@ -6,17 +6,12 @@
 // ENUMS
 // ============================================================================
 
-enum SkillDepth {
-  Strong @alias("strong") @description("Clear deep expertise - substantial projects, multiple years, or leadership in this area")
-  Moderate @alias("moderate") @description("Solid working knowledge - practical application in projects or work")
-  Basic @alias("basic") @description("Mentioned or used briefly - limited depth or exposure")
-  Unclear @alias("unclear") @description("Cannot determine depth from resume - ambiguous or insufficient detail")
-}
-
-enum EvidenceQuality {
-  StrongEvidence @alias("strong_evidence") @description("All three evidence criteria met: WHERE (specific project/role), WHAT (specific contribution), SCALE (scope/impact indicator)")
-  WeakEvidence @alias("weak_evidence") @description("1-2 criteria met - missing context about where, what, or scale")
-  KeywordOnly @alias("keyword_only") @description("Skill appears only in skills list or passing mention - no supporting context")
+enum SourceType {
+  Experience @alias("experience") @description("Skill demonstrated in professional work experience with clear evidence")
+  Project @alias("project") @description("Skill demonstrated in personal/academic projects but not professional experience")
+  Education @alias("education") @description("Skill only mentioned in education/coursework, no practical application shown")
+  Inferred @alias("inferred") @description("Skill not explicitly mentioned but reasonably inferred from related technologies or role context (e.g., ML Developer implies NumPy/Pandas)")
+  KeywordOnly @alias("keyword_only") @description("Skill listed in skills section but no supporting evidence in experience, projects, or education")
 }
 
 enum ConstraintStatus {
@@ -73,10 +68,9 @@ class RedFlag {
 
 class SkillMatch {
   skill_id string @description("Exact skill_id from framework - MUST match exactly")
-  source_reference string @description("Name of the experience entry, project, or achievement where this skill is best evidenced (e.g., 'Whiteboard Project', 'TechCorp Internship')")
-  evidence string @description("FIRST: Answer three questions - WHERE (which project/role), WHAT (specific contribution, not just 'used X'), SCALE (team size, users, duration, or complexity indicator). If any cannot be answered, state what's missing.")
-  evidence_quality EvidenceQuality @description("Quality of evidence based on how many criteria (where/what/scale) are supported by the resume")
-  depth SkillDepth @description("AFTER evidence: Assessment of skill depth based on the evidence above")
+  source_type SourceType @description("Where the strongest evidence for this skill was found")
+  source_reference string @description("Name of the experience entry, project, or section where this skill is evidenced (e.g., 'TechCorp Internship', 'Portfolio Project', 'Skills Section')")
+  evidence string @description("Brief explanation (1-2 sentences) of what demonstrates this skill. For inferred skills, explain the reasoning.")
 }
 
 class ConstraintResult {
@@ -210,7 +204,7 @@ function EvaluateCandidate(framework_json: string, parsed_resume_json: string) -
     ## CHAIN OF THOUGHT - CRITICAL
 
     For EVERY assessment, output EVIDENCE/REASONING FIRST, then the conclusion:
-    - evidence THEN depth (for skills)
+    - evidence THEN source_type (for skills)
     - evidence THEN status (for constraints)
     - evidence THEN direction (for tradeoffs)
     - reasoning THEN raw_level (for dimensions)
@@ -230,45 +224,27 @@ function EvaluateCandidate(framework_json: string, parsed_resume_json: string) -
 
     ## SKILL MATCHING
 
-    CRITICAL: Match skills that are EXPLICITLY mentioned OR INFERRED from related technologies.
+    For each skill in framework, determine WHERE the strongest evidence comes from.
 
-    ### Skill Inference (IMPORTANT)
-    Apply inference rules from framework.skill_criteria.skill_matching_guidance:
-    - If resume shows advanced library/tool usage, infer the underlying skill
-    - Example: PyTorch, TensorFlow, NumPy usage -> infer Python proficiency
-    - Example: React, Vue, Angular usage -> infer JavaScript proficiency
-    - Example: Salesforce, HubSpot usage -> infer CRM proficiency
-    - Apply similar reasoning to other related technologies (the list is not exhaustive)
+    ### Source Types (in order of strength)
+    - **experience**: Skill demonstrated in professional work with clear evidence
+    - **project**: Skill demonstrated in personal/academic projects, not professional experience
+    - **education**: Skill only in coursework/education, no practical application
+    - **inferred**: Skill not explicit but reasonably inferred from context (e.g., "ML Developer" role implies NumPy/Pandas; React usage implies JavaScript)
+    - **keyword_only**: Skill listed but no supporting evidence anywhere
 
-    A candidate fine-tuning CLIP models clearly knows Python, even if "Python" isn't listed.
-    A candidate using Figma and Sketch clearly has UI design tool proficiency.
+    ### Inference Guidelines
+    Apply common-sense inference from framework.skill_criteria.skill_matching_guidance:
+    - Library/framework usage implies underlying language (React -> JavaScript, Django -> Python)
+    - Role titles imply common tools (ML Engineer -> NumPy, Pandas, scikit-learn)
+    - Do NOT over-infer - there must be reasonable contextual connection
 
     ### What to Output
-    - Output skills that are FOUND (directly or via inference) with evidence
-    - Do NOT output skills that are missing - their absence is the signal
-    - Use exact skill_id from framework.skill_criteria.skills
-    - source_reference: Name the experience entry or project where the skill is best evidenced
-
-    ### Only Mark Skill as MISSING if:
-    1. NOT directly mentioned in resume, AND
-    2. NO technologies/tools requiring this skill are demonstrated
-
-    Evidence must answer THREE questions:
-    1. WHERE: Which specific project, role, or context?
-    2. WHAT: What exactly did they do (not just "used X" - what did they build/achieve)?
-    3. SCALE: Any indicator of scope - team size, user count, duration, complexity?
-
-    If any question cannot be answered from the resume, state what's missing.
-    This determines evidence_quality:
-    - strong_evidence: All three questions answered with specifics
-    - weak_evidence: 1-2 questions answered, missing context
-    - keyword_only: Skill only in skills list or passing mention, no supporting context
-
-    Depth assessment (separate from evidence quality):
-    - strong: Multiple years experience, led projects, deep expertise shown
-    - moderate: Used in projects, practical application, solid working knowledge
-    - basic: Mentioned in skills list, briefly used, limited context
-    - unclear: Ambiguous mention, cannot determine actual depth
+    - Output skills that are FOUND (directly or via inference)
+    - Do NOT output missing skills - absence is the signal
+    - Use exact skill_id from framework
+    - source_reference: Name the specific experience, project, or section
+    - evidence: Brief 1-2 sentence explanation of what demonstrates the skill
 
     ## CONSTRAINT CHECKING
 
@@ -310,12 +286,12 @@ function EvaluateCandidate(framework_json: string, parsed_resume_json: string) -
     1. Reference specific resume content (resume_reference field):
        - A named project, company, or role
        - A specific claim or achievement mentioned
-       - A skill with keyword_only or weak_evidence quality
+       - A skill with keyword_only source type or inferred skills
 
     2. Address a specific gap (gap_addressed field):
        - A concern from your concerns list
        - A constraint marked as "deferred"
-       - A skill where depth is unclear or evidence is weak
+       - A skill with keyword_only or inferred source type
        - A claim that seems inflated or lacks context
 
     3. Ask something NOT answerable by re-reading the resume:

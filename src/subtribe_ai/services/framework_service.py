@@ -6,10 +6,11 @@ Orchestrates calibration response -> framework generation -> post-processing.
 from typing import TypedDict
 
 
-class FrameworkResult(TypedDict):
+class FrameworkResult(TypedDict, total=False):
     """Result from framework creation."""
     framework: dict
     post_processing: dict
+    timing: dict
 
 
 class FrameworkService:
@@ -50,7 +51,7 @@ class FrameworkService:
 
         from subtribe_ai.baml_client import b
         from subtribe_ai.baml_client.types import CalibrationResponse
-        from subtribe_ai.processing.framework_processor import (
+        from subtribe_ai.processing.framework import (
             run_post_processing_pipeline,
             PostProcessingResult,
         )

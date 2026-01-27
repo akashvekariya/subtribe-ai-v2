@@ -16,13 +16,14 @@ Edge cases handled:
 import re
 from datetime import date
 from typing import Optional
+
 from dateutil.relativedelta import relativedelta
 
 from .models import (
+    DateAnomaly,
+    EnrichedExperience,
     RawDateInput,
     RawExperienceInput,
-    EnrichedExperience,
-    DateAnomaly,
 )
 
 
@@ -177,8 +178,8 @@ class DateParser:
         text = text.lower().strip()
 
         # Try to match patterns like "2.5 years", "8 months", "1 year 6 months"
-        years = 0
-        months = 0
+        years: float = 0
+        months: float = 0
 
         # Pattern: X.X years
         year_match = re.search(r"(\d+\.?\d*)\s*(?:years?|yrs?)", text)
